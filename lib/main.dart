@@ -12,6 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         // This is the theme of your application.
@@ -68,19 +69,134 @@ class _MyHomePageState extends State<MyHomePage> {
   //     _counter++;
   //   });
   // }
+  final TextEditingController _searchQueryController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = "Search query";
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchQueryController,
+      // autofocus: true,
+      decoration: const InputDecoration(
+        // hintText: "Search Data...",
+        border: InputBorder.none,
+        // hintStyle: TextStyle(color: Colors.white30),
+      ),
+      // style: TextStyle(color: Colors.white, fontSize: 16.0),
+      // onChanged: (query) => updateSearchQuery(query),
+    );
+  }
+
+  void _stopSearching() {
+    _clearSearchQuery();
+
+    setState(() {
+      _isSearching = false;
+    });
+  }
+
+  void _updateSearchQuery(String newQuery) {
+    setState(() {
+      _searchQuery = newQuery;
+    });
+  }
+
+  void _clearSearchQuery() {
+    setState(() {
+      _searchQueryController.clear();
+      _updateSearchQuery("");
+    });
+  }
+
+  void _startSearch() {
+    ModalRoute.of(context)
+        ?.addLocalHistoryEntry(LocalHistoryEntry(onRemove: _stopSearching));
+
+    setState(() {
+      _isSearching = true;
+    });
+  }
+
+  List<Widget> _buildActions() {
+    if (_isSearching) {
+      return <Widget>[
+        IconButton(
+          icon: const Icon(Icons.clear),
+          onPressed: () {
+            // if (searchQueryController.text.isEmpty) {
+            //   Navigator.pop(context);
+            //   return;
+            // }
+            // clearSearchQuery();
+          },
+        ),
+      ];
+    } else {
+      return <Widget>[
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: _startSearch,
+        ),
+      ];
+    }
+  }
+
+  Drawer _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          const DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.blue,
+            ),
+            child: Text(
+              'Drawer Header',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.message),
+            title: const Text('Messages'),
+            onTap: () {
+              // setState(() {
+              //   selectedPage = 'Messages';
+              // });
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_circle),
+            title: const Text('Profile'),
+            onTap: () {
+              // setState(() {
+              //   selectedPage = 'Profile';
+              // });
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () {
+              // setState(() {
+              //   selectedPage = 'Settings';
+              // });
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 获取屏幕的宽度
-    double screenWidth = MediaQuery.of(context).size.width;
+    // 获取屏幕的三分之一宽度
+    double imgWide = MediaQuery.of(context).size.width / 3;
+    if (imgWide > 160) {
+      imgWide = 160;
+    }
 
-    // 计算屏幕的三分之一宽度
-    double oneThirdWidth = screenWidth / 3;
-
-    // final List<Widget> items = List.generate(
-    //     20, (index) => Image.network('https://picsum.photos/250?image=9'));
-    // items[1] = Image.network(
-    //     'https://fastly.picsum.photos/id/314/536/354.jpg?hmac=uQME2VgtwoULPclwqxIs5OqNE84y_4z4uIGmMgynbLU');
     final List<Widget> items = [
       Image.network(
         'https://picsum.photos/160/160?random=',
@@ -123,11 +239,14 @@ class _MyHomePageState extends State<MyHomePage> {
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           // Here we take the value from the MyHomePage object that was created by
           // the App.build method, and use it to set our appbar title.
-          title: Text(widget.title),
+          title: _isSearching ? _buildSearchField() : Text(widget.title),
+          leading: _isSearching ? const BackButton() : null,
+          actions: _buildActions(),
         ),
+        drawer: _buildDrawer(),
         body: MasonryGridView.extent(
-          itemCount: 5,
-          maxCrossAxisExtent: 160,
+          itemCount: items.length,
+          maxCrossAxisExtent: imgWide,
           // mainAxisSpacing: 4,
           // crossAxisSpacing: 4,
           itemBuilder: (context, index) {
