@@ -34,6 +34,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      darkTheme: ThemeData.dark(),
     );
   }
 }
@@ -145,42 +146,34 @@ class _MyHomePageState extends State<MyHomePage> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: <Widget>[
-          const DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
-            child: Text(
-              'Drawer Header',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-              ),
-            ),
+          // const DrawerHeader(
+          //   decoration: BoxDecoration(
+          //     color: Colors.blue,
+          //   ),
+          //   child: Text(
+          //     'Drawer Header',
+          //     style: TextStyle(
+          //       color: Colors.white,
+          //       fontSize: 24,
+          //     ),
+          //   ),
+          // ),
+          ListTile(
+            leading: const Icon(Icons.dark_mode),
+            title: const Text('Dark mode'),
+            onTap: () {
+              setState(() {
+                MediaQuery.of(context).platformBrightness == Brightness.dark;
+                //   selectedPage = 'Messages';
+              });
+            },
           ),
           ListTile(
-            leading: const Icon(Icons.message),
-            title: const Text('Messages'),
+            leading: const Icon(Icons.question_mark),
+            title: const Text('About'),
             onTap: () {
               // setState(() {
               //   selectedPage = 'Messages';
-              // });
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.account_circle),
-            title: const Text('Profile'),
-            onTap: () {
-              // setState(() {
-              //   selectedPage = 'Profile';
-              // });
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () {
-              // setState(() {
-              //   selectedPage = 'Settings';
               // });
             },
           ),
