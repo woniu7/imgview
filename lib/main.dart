@@ -5,116 +5,66 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-      darkTheme: ThemeData.dark(),
-    );
-  }
+  MyAppState createState() => MyAppState();
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.light; // 默认主题模式
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  // int _counter = 0;
-
-  // void _incrementCounter() {
-  //   setState(() {
-  //     // This call to setState tells the Flutter framework that something has
-  //     // changed in this State, which causes it to rerun the build method below
-  //     // so that the display can reflect the updated values. If we changed
-  //     // _counter without calling setState(), then the build method would not be
-  //     // called again, and so nothing would appear to happen.
-  //     _counter++;
-  //   });
-  // }
-  final TextEditingController _searchQueryController = TextEditingController();
-  bool _isSearching = false;
-  String _searchQuery = "Search query";
-  Widget _buildSearchField() {
-    return TextField(
-      controller: _searchQueryController,
-      // autofocus: true,
-      decoration: const InputDecoration(
-        // hintText: "Search Data...",
-        border: InputBorder.none,
-        // hintStyle: TextStyle(color: Colors.white30),
-      ),
-      // style: TextStyle(color: Colors.white, fontSize: 16.0),
-      // onChanged: (query) => updateSearchQuery(query),
-    );
-  }
-
-  void _stopSearching() {
-    _clearSearchQuery();
-
+  void _toggleTheme() {
     setState(() {
+      _themeMode =
+          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
+
+  final TextEditingController _searchQueryController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _isSearching = false;
+  // String _searchQuery = "Search query";
+
+  void _submitSearchQuery(String query) {
+    setState(() {
+      // _searchQuery = query;
       _isSearching = false;
     });
+    // network query
   }
 
-  void _updateSearchQuery(String newQuery) {
-    setState(() {
-      _searchQuery = newQuery;
-    });
-  }
+  // void _stopSearching() {
+  //   _clearSearchQuery();
+
+  //   setState(() {
+  //     _isSearching = false;
+  //   });
+  // }
+
+  // void _updateSearchQuery(String newQuery) {
+  //   setState(() {
+  //     _searchQuery = newQuery;
+  //   });
+  // }
 
   void _clearSearchQuery() {
     setState(() {
       _searchQueryController.clear();
-      _updateSearchQuery("");
     });
   }
 
   void _startSearch() {
-    ModalRoute.of(context)
-        ?.addLocalHistoryEntry(LocalHistoryEntry(onRemove: _stopSearching));
+    // ModalRoute.of(context)
+    //     ?.addLocalHistoryEntry(LocalHistoryEntry(onRemove: _stopSearching));
 
     setState(() {
       _isSearching = true;
     });
+    // Future.delayed(const Duration(milliseconds: 1500), () {
+    //   _focusNode.requestFocus();
+    // });
   }
 
   List<Widget> _buildActions() {
@@ -123,11 +73,13 @@ class _MyHomePageState extends State<MyHomePage> {
         IconButton(
           icon: const Icon(Icons.clear),
           onPressed: () {
-            // if (searchQueryController.text.isEmpty) {
-            //   Navigator.pop(context);
-            //   return;
-            // }
-            // clearSearchQuery();
+            if (_searchQueryController.text.isEmpty) {
+              setState(() {
+                _isSearching = false;
+              });
+              return;
+            }
+            _clearSearchQuery();
           },
         ),
       ];
@@ -139,6 +91,23 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ];
     }
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchQueryController,
+      // autofocus: true,
+      decoration: const InputDecoration(
+        // hintText: "Search Data...",
+        border: InputBorder.none,
+        // hintStyle: TextStyle(color: Colors.white30),
+      ),
+      // style: TextStyle(color: Colors.white, fontSize: 16.0),
+      // onChanged: (query) => _updateSearchQuery(query),
+      onSubmitted: (query) => _submitSearchQuery(query),
+      enabled: _isSearching,
+      focusNode: _focusNode,
+    );
   }
 
   Drawer _buildDrawer() {
@@ -158,13 +127,14 @@ class _MyHomePageState extends State<MyHomePage> {
           //     ),
           //   ),
           // ),
+          const ListTile(),
           ListTile(
             leading: const Icon(Icons.dark_mode),
-            title: const Text('Dark mode'),
+            title: const Text('Dark mode toggle'),
             onTap: () {
               setState(() {
-                MediaQuery.of(context).platformBrightness == Brightness.dark;
                 //   selectedPage = 'Messages';
+                _toggleTheme();
               });
             },
           ),
@@ -184,6 +154,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 搜索框可以聚焦的时候(在本项目相当于搜索框enable状态)就聚焦
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_focusNode.canRequestFocus) {
+        debugPrint("focus");
+        _focusNode.requestFocus();
+      }
+    });
     // 获取屏幕的三分之一宽度
     double imgWide = MediaQuery.of(context).size.width / 3;
     if (imgWide > 160) {
@@ -218,36 +195,45 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     ];
 
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-        appBar: AppBar(
-          // TRY THIS: Try changing the color here to a specific color (to
-          // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-          // change color while the other colors stay the same.
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          // Here we take the value from the MyHomePage object that was created by
-          // the App.build method, and use it to set our appbar title.
-          title: _isSearching ? _buildSearchField() : Text(widget.title),
-          leading: _isSearching ? const BackButton() : null,
-          actions: _buildActions(),
+    return MaterialApp(
+        title: 'imgtag',
+        theme: ThemeData(
+          brightness: Brightness.light, // 明亮模式主题
         ),
-        drawer: _buildDrawer(),
-        body: MasonryGridView.extent(
-          itemCount: items.length,
-          maxCrossAxisExtent: imgWide,
-          // mainAxisSpacing: 4,
-          // crossAxisSpacing: 4,
-          itemBuilder: (context, index) {
-            return items[index];
-            // return ImageTile(
-            //     index: index, width: 200, height: 150 + 10 * index);
-          },
-        ));
+        darkTheme: ThemeData(
+          brightness: Brightness.dark, // 深色模式主题
+        ),
+        themeMode: _themeMode, // 手动控制主题模式
+        home: Scaffold(
+            appBar: AppBar(
+              // TRY THIS: Try changing the color here to a specific color (to
+              // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+              // change color while the other colors stay the same.
+              // backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+              // Here we take the value from the MyHomePage object that was created by
+              // the App.build method, and use it to set our appbar title.
+              title: _buildSearchField(),
+              leading: _isSearching
+                  ? BackButton(onPressed: () {
+                      setState(() {
+                        _isSearching = false;
+                      });
+                    })
+                  : null,
+              actions: _buildActions(),
+            ),
+            drawer: _buildDrawer(),
+            body: MasonryGridView.extent(
+              itemCount: items.length,
+              maxCrossAxisExtent: imgWide,
+              // mainAxisSpacing: 4,
+              // crossAxisSpacing: 4,
+              itemBuilder: (context, index) {
+                return items[index];
+                // return ImageTile(
+                //     index: index, width: 200, height: 150 + 10 * index);
+              },
+            )));
   }
 }
 
