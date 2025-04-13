@@ -1,0 +1,21 @@
+A simple, pure and tiny image viewer
+
+- [x] Move: Drag image
+- [x] Zoom/Resize(keep ratio): Mouse wheel scroll
+- [x] Zoom/Resize(keep ratio): Drag image border
+- [x] Resize(free): Ctrl + Drag image border
+- [x] Transparency: Ctrl + Mouse wheel scroll
+- [x] Reset image size: Mouse wheel button down
+- [x] Toggle fit screen(keep ratio): Double click
+- [x] Close: Mouse right click
+- [x] Close: q
+- [x] Reset all: <Backspace>
+- [x] Rotate(clockwise): r
+- [x] Toggle full screen: f
+- [ ] Zoom/Resize(keep ratio): +/-
+- [ ] Move: Ctrl + Up/Down/Left/Right
+- [ ] Flip(horizontal): Ctrl + f
+- [ ] Toggle reverse colour: c
+- [ ] Toggle grayscale: g
+- [ ] Toggle keep top order: t
+- [ ] Previous/Next image in current directory: Left/Right
