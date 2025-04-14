@@ -1,6 +1,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <unistd.h> 
 #include <windows.h>
+
+typedef enum { _0, _90, _180, _270 } angler;
+void zoom(HWND hwnd, float zoomFactor, int *clientWidth, int *clientHeight);
+void reset(HWND hwnd, int imgWidth, int imgHeight, angler angle, int *clientWidth, int *clientHeight, float *clientRatio);
 
 // 全局窗口过程
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
@@ -12,12 +17,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	//static int lastClientWidth = 0, lastClientHeight;
 	//保存窗口前一个状态
 	static RECT lastRect;
-	static LONG lastStyle;
+	//static LONG lastStyle;
 	static int imgWidth = 0, imgHeight = 0;
 	static float clientRatio = 1.0f;
 	static POINT lastMousePos = {0}; // 记录鼠标按下时的位置
-	static int isFillDesktop = 0, isFullScreen = 0, isFlip = 0;
-	static enum { _0, _90, _180, _270 } angle = _0;
+	static int isFillDesktop = 0, isFullScreen = 0, isFlip = 0, isWindowOnTop = 0;
+	static angler angle = _0;
 	static uint8_t alpha = 255;
 	static HDC hdcMem;
 
@@ -54,9 +59,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					//Backspace: reset all
 					case 0x08:
-						isFullScreen = 0;
-						isFillDesktop = 0;
-						isFlip = 0;
+						isFullScreen = isFillDesktop = isFlip = isWindowOnTop = 0;
 						angle = _0;
 						alpha = 255;
 					    	SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
@@ -64,12 +67,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 						clientHeight = imgHeight;
 						clientRatio = (float)clientWidth / clientHeight;
 						InvalidateRect(hwnd, NULL, TRUE);  
-						RECT rect;
-						GetWindowRect(hwnd, &rect);
-						if (rect.left < 0) rect.left = 0;
-						if (rect.top < 0) rect.top = 0;
-						SetWindowPos(hwnd, NULL, rect.left, rect.top, 
-							clientWidth, clientHeight, SWP_NOZORDER);
+						// 获取鼠标位置
+						POINT mousePos;
+						GetCursorPos(&mousePos);
+						//以鼠标位置为中心, 但不超越左边界和右边界
+						int x = mousePos.x - imgWidth/2;
+						if (x < 0) x = 0;
+						int y = mousePos.y - imgHeight/2;
+						if (y < 0) y = 0;
+						SetWindowPos(hwnd, HWND_NOTOPMOST, x, y, 
+								clientWidth, clientHeight, 0);
+						break;
+					//0
+					case 0x30:
+						reset(hwnd, imgWidth, imgHeight, angle, &clientWidth, &clientHeight, &clientRatio);
 						break;
 					//f
 					case 0x46:
@@ -86,7 +97,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 							{
 								// 保存原始窗口状态
 								GetWindowRect(hwnd, &lastRect);
-								lastStyle = GetWindowLong(hwnd, GWL_STYLE);
+								//lastStyle = GetWindowLong(hwnd, GWL_STYLE);
 
 								// 获取屏幕分辨率
 								clientWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -99,7 +110,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 							{
 								clientWidth =lastRect.right - lastRect.left;
 								clientHeight = lastRect.bottom - lastRect.top;
-								SetWindowLong(hwnd, GWL_STYLE, lastStyle);
+								//SetWindowLong(hwnd, GWL_STYLE, lastStyle);
 								SetWindowPos(hwnd, NULL, lastRect.left, lastRect.top, 
 										clientWidth, 
 										clientHeight,
@@ -108,11 +119,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 							}
 							break;
 						}
-						// q
+					// q	
 					case 0x51:
 						PostQuitMessage(0);
 						break;
-						// r
+					// r	
 					case 0x52:
 						angle++;
 						angle %= 4;
@@ -122,8 +133,47 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 						clientRatio = (float)clientWidth / clientHeight;
 						SetWindowPos(hwnd, NULL, 0, 0, 
 								clientWidth, clientHeight, SWP_NOZORDER | SWP_NOMOVE);
-
+					//t
+					case 0x54:
+						isWindowOnTop = !isWindowOnTop;
+						SetWindowPos(hwnd, isWindowOnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 						break;
+					//+	
+					case VK_OEM_PLUS:
+						zoom(hwnd, 1.1f, &clientWidth, &clientHeight);
+						break;
+					//-
+					case VK_OEM_MINUS:
+						zoom(hwnd, 0.9f, &clientWidth, &clientHeight);
+						break;
+					case VK_UP:
+					case VK_DOWN:
+					case VK_LEFT:
+					case VK_RIGHT:
+						{
+							int isCtrlPressed = GetAsyncKeyState(VK_CONTROL) & 0x8000;
+							if (isCtrlPressed)
+							{
+								int offsetY = 0;
+								int offsetX = 0;
+								switch (wParam)
+								{
+									case VK_UP: offsetY = -10; break;
+									case VK_DOWN: offsetY = 10; break;
+									case VK_LEFT: offsetX = -10; break;
+									case VK_RIGHT: offsetX = 10; break;
+								}
+								RECT rect;
+								GetWindowRect(hwnd, &rect);
+								SetWindowPos(hwnd, NULL, rect.left+offsetX, rect.top+offsetY, 
+										0, 0, SWP_NOZORDER | SWP_NOSIZE);
+							}
+							else 
+							{
+
+							}
+							break;
+						}
 					default:
 						break;
 				}
@@ -144,7 +194,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					int desktopHeight = workArea.bottom - workArea.top; // 工作区高度
 					// 保存原始窗口状态
 					GetWindowRect(hwnd, &lastRect);
-					lastStyle = GetWindowLong(hwnd, GWL_STYLE);
+					//lastStyle = GetWindowLong(hwnd, GWL_STYLE);
 
 					if (clientWidth * desktopHeight > clientHeight * desktopWidth)
 					{
@@ -164,7 +214,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					clientWidth = lastRect.right - lastRect.left;
 					clientHeight = lastRect.bottom - lastRect.top;
-					SetWindowLong(hwnd, GWL_STYLE, lastStyle);
+					//SetWindowLong(hwnd, GWL_STYLE, lastStyle);
 					SetWindowPos(hwnd, NULL, lastRect.left, lastRect.top, 
 							clientWidth, 
 							clientHeight,
@@ -179,9 +229,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				int newWidth = rect->right - rect->left;
 				int newHeight = rect->bottom - rect->top;
 
-				// 检查 Ctrl 键状态
 				int isCtrlPressed = GetAsyncKeyState(VK_CONTROL) & 0x8000;
-				//按住ctrl任意调整，不按住默认按比例
 				if (!isCtrlPressed) 
 				{
 					switch (wParam) 
@@ -240,20 +288,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					int delta = GET_WHEEL_DELTA_WPARAM(wParam);  // 获取滚轮增量
 					if (delta < 0 && (clientWidth < MIN_WIDTH || clientHeight < MIN_HEIGHT)) return 0;
 					float zoomFactor = (delta > 0) ? 1.1f : 0.9f;  // 放大或缩小
-					clientWidth *= zoomFactor;
-					clientHeight  *= zoomFactor;
-
-					//相对屏幕的鼠标坐标
-					POINT pt = { LOWORD(lParam), HIWORD(lParam) };
-					RECT rect;
-					GetWindowRect(hwnd, &rect);
-
-					int newLeft = pt.x - ((pt.x - rect.left) * zoomFactor);
-					int newTop = pt.y - ((pt.y - rect.top) * zoomFactor);
-
-					// 设置新窗口大小（保持中心位置不变）
-					SetWindowPos(hwnd, NULL, newLeft, newTop, 
-							clientWidth, clientHeight, SWP_NOZORDER);
+					zoom(hwnd, zoomFactor, &clientWidth, &clientHeight);
 				}
 				else  //set transparency
 				{
@@ -273,32 +308,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 		case WM_MBUTTONDOWN: //reset img size
 			{
-				int newWidth, newHeight;
-				if (angle == _90 || angle == _270)
-				{
-					newWidth = imgHeight;
-					newHeight = imgWidth;
-				} 
-				else 
-				{
-					newWidth = imgWidth;
-					newHeight = imgHeight;
-				}
-				//相对客户区的鼠标坐标
-				POINT pt = { LOWORD(lParam), HIWORD(lParam) };
-				RECT rect;
-				GetWindowRect(hwnd, &rect);
-				int newLeft = pt.x - (float)pt.x / clientWidth * newWidth +  rect.left;
-				int newTop = pt.y - (float)pt.y / clientHeight * newHeight + rect.top;
-
-				clientWidth = newWidth;
-				clientHeight = newHeight;
-
-				clientRatio = (float)clientWidth / clientHeight;
-
-				// 设置新窗口大小（保持中心位置不变）
-				SetWindowPos(hwnd, NULL, newLeft, newTop, 
-						clientWidth, clientHeight, SWP_NOZORDER);
+				reset(hwnd, imgWidth, imgHeight, angle, &clientWidth, &clientHeight, &clientRatio);
 				return 0;
 			}
 		case WM_PAINT: 
@@ -562,4 +572,53 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	}
 
 	return (int)msg.wParam;
+}
+
+
+void zoom(HWND hwnd, float zoomFactor, int *clientWidth, int *clientHeight) 
+{
+	POINT pt;
+	GetCursorPos(&pt); 
+	RECT rect;
+	GetWindowRect(hwnd, &rect);
+	int newLeft = pt.x - ((pt.x - rect.left) * zoomFactor);
+	int newTop = pt.y - ((pt.y - rect.top) * zoomFactor);
+	*clientWidth = (rect.right - rect.left) * zoomFactor;
+	*clientHeight = (rect.bottom - rect.top) * zoomFactor;
+
+	SetWindowPos(hwnd, NULL, newLeft, newTop, 
+			*clientWidth, *clientHeight, SWP_NOZORDER);
+}
+
+void reset(HWND hwnd, int imgWidth, int imgHeight, angler angle, int *clientWidth, int *clientHeight, float *clientRatio)
+{
+	int newWidth, newHeight;
+	if (angle == _90 || angle == _270)
+	{
+		newWidth = imgHeight;
+		newHeight = imgWidth;
+	} 
+	else 
+	{
+		newWidth = imgWidth;
+		newHeight = imgHeight;
+	}
+	POINT ptScreen;
+	GetCursorPos(&ptScreen); 
+	POINT pt = ptScreen;
+	ScreenToClient(hwnd, &pt); 
+
+	RECT rect;
+	GetWindowRect(hwnd, &rect);
+	int newLeft = pt.x - (float)pt.x / *clientWidth * newWidth +  rect.left;
+	int newTop = pt.y - (float)pt.y / *clientHeight * newHeight + rect.top;
+
+	*clientWidth = newWidth;
+	*clientHeight = newHeight;
+
+	*clientRatio = (float)*clientWidth / *clientHeight;
+
+	// 设置新窗口大小（保持中心位置不变）
+	SetWindowPos(hwnd, NULL, newLeft, newTop, 
+			*clientWidth, *clientHeight, SWP_NOZORDER);
 }

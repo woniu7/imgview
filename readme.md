@@ -9,13 +9,14 @@ A simple, pure and tiny image viewer
 - [x] Toggle fit screen(keep ratio): Double click
 - [x] Close: Mouse right click
 - [x] Close: q
-- [x] Reset all: Backspace
+- [x] Reset all(size, transparency, rotate, flip, color...): Backspace
 - [x] Rotate(clockwise): r
 - [x] Toggle full screen: f
-- [ ] Zoom/Resize(keep ratio): +/-
-- [ ] Move: Ctrl + Up/Down/Left/Right
+- [x] Zoom/Resize(keep ratio): +/-
+- [x] Reset image size: 0
+- [x] Move: Ctrl + Up/Down/Left/Right
 - [ ] Flip(horizontal): Ctrl + f
 - [ ] Toggle reverse colour: c
 - [ ] Toggle grayscale: g
-- [ ] Toggle keep top order: t
+- [x] Toggle keep top order: t
 - [ ] Previous/Next image in current directory: Left/Right
