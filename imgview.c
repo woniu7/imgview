@@ -4,7 +4,7 @@
 #include <windows.h>
 
 typedef enum { _0, _90, _180, _270 } angler;
-void zoom(HWND hwnd, float zoomFactor, int *clientWidth, int *clientHeight);
+void zoom(HWND hwnd, float zoomFactor, int *clientWidth, int *clientHeight, float clientRatio);
 void reset(HWND hwnd, int imgWidth, int imgHeight, angler angle, int *clientWidth, int *clientHeight, float *clientRatio);
 
 // 全局窗口过程
@@ -140,11 +140,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 						break;
 					//+	
 					case VK_OEM_PLUS:
-						zoom(hwnd, 1.1f, &clientWidth, &clientHeight);
+						zoom(hwnd, 1.1f, &clientWidth, &clientHeight, clientRatio);
 						break;
 					//-
 					case VK_OEM_MINUS:
-						zoom(hwnd, 0.9f, &clientWidth, &clientHeight);
+						zoom(hwnd, 0.9f, &clientWidth, &clientHeight, clientRatio);
 						break;
 					case VK_UP:
 					case VK_DOWN:
@@ -287,8 +287,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					int delta = GET_WHEEL_DELTA_WPARAM(wParam);  // 获取滚轮增量
 					if (delta < 0 && (clientWidth < MIN_WIDTH || clientHeight < MIN_HEIGHT)) return 0;
-					float zoomFactor = (delta > 0) ? 1.1f : 0.9f;  // 放大或缩小
-					zoom(hwnd, zoomFactor, &clientWidth, &clientHeight);
+					float zoomFactor = (delta > 0)? 1.05f: 0.95f;
+					zoom(hwnd, zoomFactor, &clientWidth, &clientHeight, clientRatio);
 				}
 				else  //set transparency
 				{
@@ -432,6 +432,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				pInfo->ptMinTrackSize.y = MIN_HEIGHT; // 最小高度
 				return 0;
 			}
+		case WM_ERASEBKGND:
+			return 1;  
 
 		case WM_DESTROY:
 			if(hBitmap)
@@ -523,6 +525,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	// 注册窗口类
 	WNDCLASS wc = {0};
+	//WM_LBUTTONDBLCLK
 	wc.style = CS_DBLCLKS;
 	wc.lpfnWndProc = WndProc;
 	wc.hInstance = hInstance;
@@ -575,7 +578,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 }
 
 
-void zoom(HWND hwnd, float zoomFactor, int *clientWidth, int *clientHeight) 
+void zoom(HWND hwnd, float zoomFactor, int *clientWidth, int *clientHeight, float clientRatio) 
 {
 	POINT pt;
 	GetCursorPos(&pt); 
@@ -583,9 +586,10 @@ void zoom(HWND hwnd, float zoomFactor, int *clientWidth, int *clientHeight)
 	GetWindowRect(hwnd, &rect);
 	int newLeft = pt.x - ((pt.x - rect.left) * zoomFactor);
 	int newTop = pt.y - ((pt.y - rect.top) * zoomFactor);
-	*clientWidth = (rect.right - rect.left) * zoomFactor;
 	*clientHeight = (rect.bottom - rect.top) * zoomFactor;
+	*clientWidth = (float)*clientHeight * clientRatio;
 
+	//todo optimize flicker
 	SetWindowPos(hwnd, NULL, newLeft, newTop, 
 			*clientWidth, *clientHeight, SWP_NOZORDER);
 }
