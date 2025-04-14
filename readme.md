@@ -9,7 +9,7 @@ A simple, pure and tiny image viewer
 - [x] Toggle fit screen(keep ratio): Double click
 - [x] Close: Mouse right click
 - [x] Close: q
-- [x] Reset all: <Backspace>
+- [x] Reset all: Backspace
 - [x] Rotate(clockwise): r
 - [x] Toggle full screen: f
 - [ ] Zoom/Resize(keep ratio): +/-
