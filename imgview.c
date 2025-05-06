@@ -127,12 +127,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					case 0x52:
 						angle++;
 						angle %= 4;
-						clientWidth = clientWidth ^ clientHeight;
-						clientHeight = clientWidth ^ clientHeight;
-						clientWidth = clientWidth ^ clientHeight;
-						clientRatio = (float)clientWidth / clientHeight;
-						SetWindowPos(hwnd, NULL, 0, 0, 
-								clientWidth, clientHeight, SWP_NOZORDER | SWP_NOMOVE);
+						if (clientWidth != clientHeight) {
+							clientWidth = clientWidth ^ clientHeight;
+							clientHeight = clientWidth ^ clientHeight;
+							clientWidth = clientWidth ^ clientHeight;
+							clientRatio = (float)clientWidth / clientHeight;
+							SetWindowPos(hwnd, NULL, 0, 0, 
+									clientWidth, clientHeight, SWP_NOZORDER | SWP_NOMOVE);
+						} else {
+							InvalidateRect(hwnd, NULL, TRUE);  
+						}
 					//t
 					case 0x54:
 						isWindowOnTop = !isWindowOnTop;
@@ -317,6 +321,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				// 窗口 DC, 每次PAINT都要调用
 				HDC hdc = BeginPaint(hwnd, &ps);
 
+				int drawWidth = clientWidth;
+				int drawHeight = clientHeight;
+
 				//x′=eM11⋅x + eM12⋅y + eDx
 				//y′=eM21⋅x + eM22⋅y + eDy
 				XFORM xform = {
@@ -324,8 +331,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				     0.0f, 1.0f, 
 				     0.0f, 0.0f
 				};
-				int drawWidth = clientWidth;
-				int drawHeight = clientHeight;
 
 				switch (angle) 
 				{
@@ -477,7 +482,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		MessageBox(NULL, errmsg, "Error", MB_OK | MB_ICONERROR);
 		return -1;
 	}
-	// 分配内存（纯 C 使用 malloc）
 	unsigned char* bgraData = (unsigned char*)malloc(width * height * 4);
 	if (!bgraData) return -2; // 检查内存分配是否成功
 
