@@ -374,6 +374,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 				SetGraphicsMode(hdc, GM_ADVANCED);
 				SetWorldTransform(hdc, &xform);
+				// 使用更高质量的插值(默认COLORONCOLOR效率较高，但缩小时较高，但缩小时较高，但缩小时较高，但缩小时颜色失真)
+				SetStretchBltMode(hdc, HALFTONE); 
 				StretchBlt(hdc, 0, 0, drawWidth, drawHeight,
 						hdcMem, 0, 0, imgWidth, imgHeight, SRCCOPY);
 
